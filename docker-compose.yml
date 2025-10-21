@@ -1,0 +1,47 @@
+# docker-compose.yml (FINAL - Corrected Paths)
+services:
+  backend:
+    build: ./backend
+    container_name: bharath-ai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      # --- THIS IS THE FIX ---
+      # The path is now correct for our new project structure
+      - ./backend/.env
+    dns:
+      - 8.8.8.8
+    networks:
+      - bharath_ai_net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15
+    container_name: bharath-ai-db
+    restart: always
+    env_file:
+      # --- THIS IS THE FIX ---
+      # The path is now correct for our new project structure
+      - ./backend/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - bharath-ai-data:/var/lib/postgresql/data
+    networks:
+      - bharath_ai_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bharath-ai-data:
+
+networks:
+  bharath_ai_net:
+    driver: bridge

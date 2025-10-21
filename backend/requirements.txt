@@ -1,0 +1,25 @@
+# backend/requirements.txt (FINAL - Clean Slate)
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-dotenv==1.0.1
+pydantic==2.7.1
+sqlmodel==0.0.18
+SQLAlchemy==2.0.30
+asyncpg==0.29.0
+greenlet==3.0.3
+authlib==1.3.1
+python-jose[cryptography]==3.3.0
+itsdangerous==2.2.0
+google-api-python-client
+google-auth-oauthlib
+google-generativeai==0.7.1
+pypdf==4.2.0
+python-docx==1.1.2
+openpyxl==3.1.5
+pandas==2.2.2
+pytesseract==0.3.13
+Pillow==10.4.0
+pdf2image==1.17.0
+beautifulsoup4==4.12.3
+lxml==5.2.2
+httpx==0.27.0
