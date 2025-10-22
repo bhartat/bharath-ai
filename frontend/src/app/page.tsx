@@ -1,8 +1,10 @@
-// frontend/src/app/page.tsx (FINAL)
+// frontend/src/app/page.tsx (FINAL - With Features Section)
 'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiZap, FiEdit, FiClock, FiShield } from 'react-icons/fi';
+import { FiZap, FiEdit, FiClock, FiShield, FiPaperclip } from 'react-icons/fi';
+import { JSX } from 'react/jsx-runtime';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -22,16 +24,26 @@ export default function LandingPage() {
       <div className="absolute inset-0 -z-10 h-full w-full bg-slate-900 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
         <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-400 opacity-20 blur-[100px]"></div>
       </div>
+
       <header className="fixed top-0 left-0 right-0 z-20 bg-slate-900/50 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">bharath.ai</div>
-          <a href={googleLoginUrl} className="px-4 py-2 text-sm font-medium rounded-md bg-white text-slate-900 hover:bg-gray-200 transition-colors">Sign In</a>
+          <div className="text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            bharath.ai
+          </div>
+          <a href={googleLoginUrl} className="px-4 py-2 text-sm font-medium rounded-md bg-white text-slate-900 hover:bg-gray-200 transition-colors">
+            Sign In
+          </a>
         </div>
       </header>
+
       <main className="container mx-auto px-6 flex flex-col items-center justify-center min-h-screen pt-24 text-center">
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
-          <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">Achieve Inbox Zero.<br />Powered by AI.</motion.h1>
-          <motion.p variants={itemVariants} className="mt-6 max-w-2xl text-lg text-gray-400">bharath.ai analyzes your emails, extracts action items, and drafts perfect replies, so you can focus on what matters.</motion.p>
+          <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
+            Achieve Inbox Zero.<br />Powered by AI.
+          </motion.h1>
+          <motion.p variants={itemVariants} className="mt-6 max-w-2xl text-lg text-gray-400">
+            bharath.ai analyzes your emails and attachments, extracts action items, and drafts perfect replies, so you can focus on what matters.
+          </motion.p>
           <motion.div variants={itemVariants} className="mt-8">
             <a href={googleLoginUrl} className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-lg font-semibold rounded-full text-slate-900 bg-white hover:bg-gray-200 transition-transform transform hover:scale-105 shadow-lg">
               <svg className="w-6 h-6 mr-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="#4285F4" d="M488 261.8C488 403.3 381.5 512 244 512 109.8 512 0 402.2 0 261.8 0 122.4 109.8 13.5 244 13.5c73.5 0 134.3 29.1 175.9 76.2l-64.8 64.2c-23.4-22.3-55.4-35.8-91.1-35.8-70.1 0-128.2 57.2-128.2 128.2s58.1 128.2 128.2 128.2c80.3 0 114-52.7 118.8-78.2H244v-81.6h236.8c2.4 13.1 3.2 27.5 3.2 42.6z"/></svg>
@@ -40,6 +52,49 @@ export default function LandingPage() {
           </motion.div>
         </motion.div>
       </main>
+
+      {/* --- THIS IS THE NEW FEATURES SECTION --- */}
+      <section className="py-20 bg-slate-900/50">
+        <div className="container mx-auto px-6">
+          <motion.div 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, amount: 0.3 }} 
+            variants={containerVariants} 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            <FeatureCard
+              icon={<FiZap className="w-8 h-8 text-blue-400" />}
+              title="Instant Email Summaries"
+              description="Understand long emails and threads in seconds. Our AI extracts key points and action items so you can get to the point, faster."
+            />
+            <FeatureCard
+              icon={<FiPaperclip className="w-8 h-8 text-blue-400" />}
+              title="PDF Attachment Analysis"
+              description="The only tool you'll need to unlock insights from PDFs. bharath.ai reads and summarizes long reports and documents directly from your inbox."
+            />
+            <FeatureCard
+              icon={<FiEdit className="w-8 h-8 text-blue-400" />}
+              title="Context-Aware Reply Drafting"
+              description="Draft perfect, professionally-toned replies with a single click. Our AI understands the context and helps you respond with confidence."
+            />
+          </motion.div>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-800">
+        <div className="container mx-auto px-6 py-8 text-center text-gray-500">
+          <p>&copy; {new Date().getFullYear()} bharath.ai. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
+
+const FeatureCard = ({ icon, title, description }: { icon: JSX.Element; title: string; description: string }) => (
+  <motion.div variants={itemVariants} className="bg-slate-800/50 p-8 rounded-lg border border-slate-700 text-center flex flex-col items-center">
+    <div className="mb-4 bg-slate-700/50 p-3 rounded-full">{icon}</div>
+    <h3 className="text-xl font-semibold mb-2">{title}</h3>
+    <p className="text-gray-400">{description}</p>
+  </motion.div>
+);
