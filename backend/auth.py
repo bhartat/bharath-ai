@@ -1,4 +1,4 @@
-# backend/auth.py (FINAL - Clean Slate)
+# backend/auth.py (FINAL - With Calendar Scope)
 import os
 from datetime import datetime, timedelta, timezone
 from typing import cast
@@ -19,10 +19,17 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
     raise ValueError("Google OAuth credentials are not set in .env file.")
+
 oauth.register(
-    name='google', client_id=GOOGLE_CLIENT_ID, client_secret=GOOGLE_CLIENT_SECRET,
+    name='google',
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile https://www.googleapis.com/auth/gmail.modify', 'prompt': 'consent'}
+    client_kwargs={
+        # --- THIS IS THE ONLY CHANGE ---
+        'scope': 'openid email profile https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events',
+        'prompt': 'consent'
+    }
 )
 
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -56,7 +63,7 @@ async def find_or_create_user(session: AsyncSession, user_info: dict, token: dic
         db_user.oauth_token_expiry = expires_at
     else:
         db_user = User(
-            googleId=google_id, email=user_info.get('email') or "", displayName=user_info.get('name'),
+            googleId=google_id, email=user_info.get('email', ''), displayName=user_info.get('name'),
             avatarUrl=user_info.get('picture'), oauth_access_token=token.get('access_token'),
             oauth_refresh_token=token.get('refresh_token'), oauth_token_expiry=expires_at
         )

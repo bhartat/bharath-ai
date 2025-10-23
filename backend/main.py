@@ -1,8 +1,10 @@
-# backend/main.py (FINAL - Clean Slate)
+# backend/main.py (FINAL - With Calendar Feature)
 import os
+import json
+from datetime import datetime
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.sessions import SessionMiddleware
@@ -13,7 +15,8 @@ from bs4 import BeautifulSoup
 from database import create_db_and_tables, get_session
 from models import User
 from auth import oauth, create_access_token, find_or_create_user, get_current_user
-from services import gmail_service, ai_service
+# --- THIS IS THE FIRST CHANGE: Import the new calendar service ---
+from services import gmail_service, ai_service, calendar_service
 
 load_dotenv()
 CLIENT_URL = os.getenv("CLIENT_URL")
@@ -48,6 +51,12 @@ class SummarizeRequest(BaseModel):
 
 class GenerateReplyRequest(BaseModel):
     prompt: str
+    
+# --- THIS IS THE SECOND CHANGE: Add the new Calendar model ---
+class CalendarEventRequest(BaseModel):
+    title: str
+    date_string: str
+    context: str
 
 # --- API Routes ---
 @app.get("/auth/google")
@@ -118,6 +127,60 @@ async def api_summarize_text(request: SummarizeRequest, current_user: User = Dep
 async def api_generate_reply(request: GenerateReplyRequest, current_user: User = Depends(get_current_user)):
     reply = await ai_service.generate_reply(request.prompt)
     return {"reply": reply}
+
+# --- THIS IS THE THIRD CHANGE: The new Calendar endpoint ---
+@app.post("/api/calendar/create-event")
+async def create_event_api(
+    event_request: CalendarEventRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Uses AI to parse a date string and creates a Google Calendar event.
+    """
+    if not ai_service.model:
+        raise HTTPException(status_code=503, detail="AI Service is not initialized.")
+
+    prompt = f"""
+    Given the current date of {datetime.utcnow().strftime('%Y-%m-%d')}, parse the following text string into a structured date and time.
+    The user wants to create a one-hour calendar event based on this.
+
+    Text to parse: "{event_request.date_string}"
+    Context from email: "{event_request.context}"
+    
+    Your response MUST be ONLY a single, raw JSON object with this exact structure:
+    {{
+        "start_iso": "YYYY-MM-DDTHH:MM:SSZ",
+        "end_iso": "YYYY-MM-DDTHH:MM:SSZ"
+    }}
+    
+    - Assume a default time of 9:00 AM if no time is specified.
+    - The end time should be exactly one hour after the start time.
+    - The format must be a valid ISO 8601 string in UTC (e.g., 2025-10-25T09:00:00Z).
+    """
+    
+    try:
+        response = await ai_service.model.generate_content_async(prompt)
+        raw_text = response.text.replace("```json", "").replace("```", "").strip()
+        parsed_times = json.loads(raw_text)
+        start_time = parsed_times['start_iso']
+        end_time = parsed_times['end_iso']
+    except Exception as e:
+        print(f"ERROR parsing date with AI: {e}")
+        raise HTTPException(status_code=500, detail="AI failed to parse the date string.")
+
+    service = calendar_service.get_calendar_service(current_user)
+    result = await calendar_service.create_calendar_event(
+        service,
+        title=event_request.title,
+        start_time=start_time,
+        end_time=end_time,
+        description=f"Created by bharath.ai from an email with the subject: '{event_request.title}'"
+    )
+
+    if result["status"] == "error":
+        raise HTTPException(status_code=500, detail=result["message"])
+        
+    return result
 
 @app.get("/")
 async def read_root():
