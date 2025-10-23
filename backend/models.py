@@ -1,4 +1,4 @@
-# backend/models.py (FINAL - Clean Slate)
+# backend/models.py (FINAL - With Persona Field)
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from datetime import datetime
@@ -12,3 +12,4 @@ class User(SQLModel, table=True):
     oauth_access_token: Optional[str] = Field(default=None, max_length=2048)
     oauth_refresh_token: Optional[str] = Field(default=None, max_length=2048)
     oauth_token_expiry: Optional[datetime] = Field(default=None)
+    persona: Optional[str] = Field(default="A professional and helpful assistant.", max_length=1024)
