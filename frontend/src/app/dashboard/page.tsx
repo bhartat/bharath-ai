@@ -1,4 +1,4 @@
-// frontend/src/app/dashboard/page.tsx (FINAL - Definitive Fix)
+// frontend/src/app/dashboard/page.tsx (FINAL - Definitive with Professional Notifications)
 'use client';
 
 import { useEffect, useState, Suspense, useCallback, useRef } from 'react';
@@ -68,8 +68,9 @@ function DashboardUI() {
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [draftContent, setDraftContent] = useState('');
   const lastDraftPrompt = useRef('');
+  
+  // --- THIS IS THE NEW NOTIFICATION STATE AND FUNCTION ---
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -111,8 +112,7 @@ function DashboardUI() {
   
   const processAIResponse = (responseSummary: string) => {
     try {
-       const parsed = JSON.parse(responseSummary);
-       setAiAnalysis(parsed);
+       setAiAnalysis(JSON.parse(responseSummary));
     } catch (e) {
        setAiAnalysis({ summary: responseSummary, action_items: [], key_dates: [] });
     }
@@ -143,8 +143,7 @@ function DashboardUI() {
     showNotification(`Creating event for: ${dateString}...`);
     try {
         const result = await fetchApi('/calendar/create-event', {
-            method: 'POST',
-            body: JSON.stringify({ title: selectedEmail.subject, date_string: dateString, context: selectedEmail.body })
+            method: 'POST', body: JSON.stringify({ title: selectedEmail.subject, date_string: dateString, context: selectedEmail.body })
         });
         if (result.link) {
             showNotification('Event created successfully!', 'success');
@@ -152,7 +151,7 @@ function DashboardUI() {
         } else { throw new Error('Event creation failed.'); }
     } catch (err) {
         console.error("Failed to create event:", err);
-        showNotification('Could not create the calendar event. Check logs.', 'error');
+        showNotification('Could not create event.', 'error');
     }
   };
 
@@ -175,11 +174,24 @@ function DashboardUI() {
   
   const handleRegenerateDraft = () => {
     if (!lastDraftPrompt.current) return;
-    const modifiedPrompt = `${lastDraftPrompt.current}\n\nPlease provide a different version of the reply.`;
+    const modifiedPrompt = `${lastDraftPrompt.current}\n\nPlease provide a different version.`;
     generateDraft(modifiedPrompt);
   };
 
-  const handleSendReply = async () => { /* your existing logic */ };
+  const handleSendReply = async () => {
+    if (!selectedEmail || !draftContent) return;
+    setIsLoading(prev => ({ ...prev, sending: true }));
+    try {
+        const recipient = selectedEmail.sender.match(/<(.+)>/)?.[1] || selectedEmail.sender;
+        await fetchApi('/gmail/send', {
+            method: 'POST', body: JSON.stringify({ to: recipient, subject: `Re: ${selectedEmail.subject}`, body: draftContent })
+        });
+        setIsReplyModalOpen(false);
+        showNotification('Reply sent successfully!', 'success');
+    } catch (err) { showNotification('Failed to send email.', 'error'); }
+    finally { setIsLoading(prev => ({ ...prev, sending: false })); }
+  };
+
   const handleLogout = () => { localStorage.removeItem('authToken'); router.push('/'); };
 
   if (isAuthLoading) {
@@ -189,10 +201,10 @@ function DashboardUI() {
   return (
     <div className="flex h-screen w-full bg-gray-900 text-gray-200 font-sans relative">
       {notification && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right-10 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+        <div className={`fixed top-5 right-5 z-50 flex items-center px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-right-10 ${notification.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
           {notification.type === 'success' ? <FiCheckCircle className="mr-3" /> : <FiAlertTriangle className="mr-3" />}
           <span>{notification.message}</span>
-          <button onClick={() => setNotification(null)} className="ml-4"><FiX size={18} /></button>
+          <button onClick={() => setNotification(null)} className="ml-4 opacity-70 hover:opacity-100"><FiX size={18} /></button>
         </div>
       )}
 
@@ -249,7 +261,9 @@ function DashboardUI() {
                                 {aiAnalysis.key_dates.map((date, i) => (
                                     <li key={i} className="flex items-center justify-between bg-slate-800/30 p-3 rounded-md border border-slate-700/50 text-gray-300">
                                         <div className="flex items-center"><FiClock className="mr-3 text-yellow-500/50"/> {date}</div>
-                                        <button onClick={() => handleCreateEvent(date)} className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-500 transition-colors" title="Add to Calendar"><FiPlusCircle size={14} /> Add to Calendar</button>
+                                        <button onClick={() => handleCreateEvent(date)} className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-500 transition-colors" title="Add to Calendar">
+                                            <FiPlusCircle size={14} /> Add to Calendar
+                                        </button>
                                     </li>
                                 ))}
                             </ul>
