@@ -1,4 +1,4 @@
-# backend/main.py (FINAL - With Persona and Calendar Features)
+# backend/main.py (FINAL - Definitive with Thread Feature)
 import os, json
 from datetime import datetime
 from contextlib import asynccontextmanager
@@ -112,56 +112,52 @@ async def api_summarize_text(request: SummarizeRequest, current_user: User = Dep
 
 @app.post("/api/ai/generate-reply")
 async def api_generate_reply(request: GenerateReplyRequest, current_user: User = Depends(get_current_user)):
-    # This now correctly passes the user's persona to the AI service
     reply = await ai_service.generate_reply(request.prompt, persona=current_user.persona or "")
     return {"reply": reply}
 
 @app.post("/api/calendar/create-event")
 async def create_event_api(event_request: CalendarEventRequest, current_user: User = Depends(get_current_user)):
-    if not ai_service.model:
-        raise HTTPException(status_code=503, detail="AI Service is not initialized.")
-    prompt = f"""
-    Given the current date of {datetime.utcnow().strftime('%Y-%m-%d')}, parse "{event_request.date_string}" into a valid ISO 8601 string in UTC (ending with 'Z').
-    The event is one hour long. Assume a default time of 9:00 AM if not specified.
-    Context: "{event_request.context}"
-    Your response MUST be ONLY a single, raw JSON object like this: {{"start_iso": "YYYY-MM-DDTHH:MM:SSZ", "end_iso": "YYYY-MM-DDTHH:MM:SSZ"}}
-    """
+    if not ai_service.model: raise HTTPException(status_code=503, detail="AI Service not initialized.")
+    prompt = f'Given current date {datetime.utcnow().strftime("%Y-%m-%d")}, parse "{event_request.date_string}" into a valid ISO 8601 UTC string (ending in Z) for a one-hour event. Assume 9 AM if no time. Context: "{event_request.context}". Respond ONLY with raw JSON: {{"start_iso": "...", "end_iso": "..."}}'
     try:
         response = await ai_service.model.generate_content_async(prompt)
-        raw_text = response.text.replace("```json", "").replace("```", "").strip()
-        parsed_times = json.loads(raw_text)
+        parsed_times = json.loads(response.text.replace("```json", "").replace("```", "").strip())
         start_time, end_time = parsed_times['start_iso'], parsed_times['end_iso']
     except Exception as e:
-        print(f"ERROR parsing date with AI: {e}")
-        raise HTTPException(status_code=500, detail="AI failed to parse the date.")
+        print(f"ERROR parsing date with AI: {e}"); raise HTTPException(status_code=500, detail="AI failed to parse date.")
     service = calendar_service.get_calendar_service(current_user)
     result = await calendar_service.create_calendar_event(
         service, title=event_request.title, start_time=start_time, end_time=end_time,
-        description=f"Created by bharath.ai from an email with the subject: '{event_request.title}'"
+        description=f"Created by bharath.ai from email: '{event_request.title}'"
     )
-    if result["status"] == "error":
-        raise HTTPException(status_code=500, detail=result["message"])
+    if result["status"] == "error": raise HTTPException(status_code=500, detail=result["message"])
     return result
     
-# --- NEW PERSONA ENDPOINTS ---
 @app.get("/api/me/persona")
 async def get_persona(current_user: User = Depends(get_current_user)):
     return {"persona": current_user.persona}
 
 @app.put("/api/me/persona")
-async def update_persona(
-    request: PersonaUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
-):
+async def update_persona(request: PersonaUpdateRequest, current_user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     user_to_update = await session.get(User, current_user.id)
-    if not user_to_update:
-        raise HTTPException(status_code=404, detail="User not found")
+    if not user_to_update: raise HTTPException(status_code=404, detail="User not found")
     user_to_update.persona = request.persona
     session.add(user_to_update)
     await session.commit()
     await session.refresh(user_to_update)
     return {"message": "Persona updated successfully"}
+
+# --- THIS IS THE NEW ENDPOINT ---
+@app.post("/api/gmail/thread/{thread_id}/summarize")
+async def summarize_thread_api(thread_id: str, current_user: User = Depends(get_current_user)):
+    service = gmail_service.get_gmail_service(current_user)
+    thread_text = await gmail_service.fetch_thread(service, thread_id)
+    if "Error" in thread_text:
+        return {"summary": json.dumps({"summary": thread_text, "action_items": [], "key_dates": []})}
+    
+    # Pass `is_thread=True` to use the special thread prompt
+    summary_json = await ai_service.summarize_text(thread_text, is_thread=True)
+    return {"summary": summary_json}
 
 @app.get("/")
 async def read_root():
